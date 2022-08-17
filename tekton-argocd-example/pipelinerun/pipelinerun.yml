@@ -1,0 +1,35 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: build-deploy-
+spec:
+  pipelineRef:
+    name: build-deploy
+  serviceAccountName: pipeline
+  params:
+  - name: buildRevision
+    value: 'd9c7ccb0713da882d8373169e2a1d705f5959386'
+  - name: appGitUrl
+    value: 'git@github.com:example/app.git'
+  - name: configGitUrl
+    value: 'git@github.com:example/app-config.git'
+  - name: appImage
+    value: 'docker.example.com/app'
+  - name: repo-url
+    value: 'https://github.com/kwbach/springboot_health.git'
+  - name: branch-name
+    value: 'main'
+  workspaces:
+  - name: app-source
+    emptyDir: {}
+  - name: config-source
+    emptyDir: {}
+  - name: shared-data
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+---
