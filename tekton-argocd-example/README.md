@@ -1,12 +1,11 @@
 # Tekton with ArgoCD
 
 Blueprint for a Tekton + ArgoCD application setup.
+Supplementary documentation is here: https://oteemo.atlassian.net/wiki/spaces/OL/pages/2297921537/Tooling+POCs
 
 ## Installation
 
-Requires a Kubernetes cluster with Istio installation.  Also testing if NGINX Ingress Controller can be used instead.
-This setup is being completed on a pre-existing bare-metal kubernetes cluster in a home lab.  The setup instructions
-are located here: https://drive.google.com/file/d/1-BddJ0GjK8oSMG0bqcPN7-dZCFhYJXa3/view?usp=sharing
+Requires a Kubernetes cluster.  It can be anywhere: local, bare-metal, cloud, it doesn't matter. 
 
 Install Tekton
 
