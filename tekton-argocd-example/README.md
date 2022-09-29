@@ -3,6 +3,19 @@
 Blueprint for a Tekton + ArgoCD application setup.
 Supplementary documentation is here: https://oteemo.atlassian.net/wiki/spaces/OL/pages/2297921537/Tooling+POCs
 
+# Description
+
+The purpose of this repo is to create a mock pipeline that allows for experimenting with Tekton features and determining the difficulty level of working with pipelines in Tekton's yaml syntax.  The main yaml which defines all of the pipeline tasks is located in the [pipeline-buildpacks.yaml](https://github.com/Oteemo/oteemolabs-tools/blob/main/tekton-argocd-example/buildpacks/pipeline-buildpacks.yaml).  Tekton is just performing the CI (build) portion of the pipeline.  ArgoCD will be used for deployments.  Many of the other files in this repo are helper or sample files.  The Tekton tasks that were tested are listed below.  All of the tasks are based on reusable Tasks and Pipelines found at https://hub.tekton.dev/.
+
+1. **Fetch** Java source code from Git (https://github.com/kwbach/springboot_health)
+2. **Build** a container image using Paketo cloud native buildpacks
+3. **Trigger Deploy** using a sed command to update the image tag in the deployment.yaml file.  ArgoCD will detect the change and redeploy the new image into Kubernetes.
+
+
+Blueprint for a Tekton + ArgoCD application setup.
+Supplementary documentation is here: https://oteemo.atlassian.net/wiki/spaces/OL/pages/2297921537/Tooling+POCs
+
+
 ## Installation
 
 Requires a Kubernetes cluster.  It can be anywhere: local, bare-metal, cloud, it doesn't matter. 
