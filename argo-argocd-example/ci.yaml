@@ -1,16 +1,17 @@
+# This example demonstrates the use of a git repo as a hard-wired input artifact.
+# The argo repo is cloned to its target destination at '/src' for the main container to consume.
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  generateName: ci-example-
+  generateName: ci-mock-
 spec:
-  # entrypoint is the name of the template used as the starting point of the workflow
-  entrypoint: ci-example
+  entrypoint: main
   # the 'ci-example' template accepts a parameter 'revision', with a default of 'cfe12d6'.
   # this can be overridden via argo CLI (e.g. `argo submit ci.yaml -p revision=0dea2d0`)
   arguments:
     parameters:
     - name: revision
-      value: cfe12d6
+      value: main
   # a temporary volume, named workdir, will be used as a working directory
   # for this workflow. This volume is passed around from step to step.
   volumeClaimTemplates:
@@ -22,66 +23,107 @@ spec:
         requests:
           storage: 1Gi
 
+  imagePullSecrets:
+  - name: regsecret
+
   templates:
-  - name: ci-example
-    inputs:
-      parameters:
-      - name: revision
+
+  - name: main
     steps:
-    - - name: build
-        template: build-golang-example
-        arguments:
-          parameters:
-          - name: revision
-            value: "{{inputs.parameters.revision}}"
-    # the test step expands into three parallel steps running
-    # different operating system images. each mounts the workdir
-    # and runs the compiled binary from the build step.
-    - - name: test
-        template: run-hello
-        arguments:
-          parameters:
-          - name: os-image
-            value: "{{item.image}}:{{item.tag}}"
-        withItems:
-        - { image: 'debian', tag: '9.1' }
-        - { image: 'alpine', tag: '3.6' }
-        - { image: 'ubuntu', tag: '17.10' }
+    - - name: copy-source
+        template: git-clone-template
 
-  - name: build-golang-example
+    # - - name: verify
+    #     template: print-template
+
+    - - name: compile
+        template: compile-template        
+
+
+  - name: git-clone-template
     inputs:
-      parameters:
-      - name: revision
       artifacts:
-      - name: code
-        path: /go/src/github.com/golang/example
+      - name: argo-source
+        path: /src/app
         git:
-          repo: https://github.com/golang/example.git
-          revision: "{{inputs.parameters.revision}}"
+          repo: https://github.com/kwbach/springboot_health.git
+          revision: "b8903c5"
+          # For private repositories, create a k8s secret containing the git credentials and
+          # reference the secret keys in the secret selectors: usernameSecret, passwordSecret,
+          # or sshPrivateKeySecret.
+          # NOTE: when authenticating via sshPrivateKeySecret, the repo URL should supplied in its
+          # SSH format (e.g. git@github.com:argoproj/argo-workflows.git). Similarly, when authenticating via
+          # basic auth, the URL should be in its HTTP form (e.g. https://github.com/argoproj/argo-workflows.git)
+          # usernameSecret:
+          #   name: github-creds
+          #   key: username
+          # passwordSecret:
+          #   name: github-creds
+          #   key: password
+          # sshPrivateKeySecret:
+          #   name: github-creds
+          #   key: ssh-private-key
+          # 
+          # insecureIgnoreHostKey disables SSH strict host key checking during the git clone
+          # NOTE: this is unnecessary for the well-known public SSH keys from the major git
+          # providers (github, bitbucket, gitlab, azure) as these keys are already baked into
+          # the executor image which performs the clone.
+          # insecureIgnoreHostKey: true
+          #
+          # Shallow clones/fetches can be performed by providing a `depth`.
+          # depth: 1
+          #
+          # Additional ref specs to fetch down prior to checkout can be
+          # provided with `fetch`. This may be necessary if `revision` is a
+          # non-branch/-tag ref and thus not covered by git's default fetch.
+          # See https://git-scm.com/book/en/v2/Git-Internals-The-Refspec for
+          # the refspec format.
+          # fetch: refs/meta/*
+          # fetch: refs/changes/*
+          #
+          # Single branch mode can be specified by providing a `singleBranch` and `branch` This mode 
+          # is faster than passing in a revision, as it will only fetch the references to the given branch.
+          # singleBranch: true
+          # branch: my-branch
     container:
-      image: golang:1.8
+      image: alpine/git
       command: [sh, -c]
-      args: ["
-        cd /go/src/github.com/golang/example/hello &&
-        git status &&
-        go build -v .
-      "]
+      args: ["ls -l /src/app"]
       volumeMounts:
       - name: workdir
-        mountPath: /go
+        mountPath: /src      
 
-  - name: run-hello
-    inputs:
-      parameters:
-      - name: os-image
+  - name: print-template
     container:
-      image: "{{inputs.parameters.os-image}}"
+      image: alpine
       command: [sh, -c]
-      args: ["
-        uname -a ;
-        cat /etc/os-release ;
-        /go/src/github.com/golang/example/hello/hello
-      "]
+      args: ["uname -a ; cat /src/app/pom.xml"]
       volumeMounts:
       - name: workdir
-        mountPath: /go
+        mountPath: /src
+
+    # outputs:
+    #   artifacts:
+    #   - name: source
+    #     path: /src
+    #   parameters:
+    #   - name: tag
+    #     valueFrom:
+    #       path: /tmp/git-commit
+
+  - name: compile-template
+    container:
+      image: docker.io/kbachman/kubernetes:maven 
+      command: [sh, -c]
+      args: ["/usr/bin/mvn package -T 1C -o -Dmaven.test.skip=true"]
+      volumeMounts:
+      - name: workdir
+        mountPath: /src    
+
+# Use Kaniko to create a container image that includes the 
+# # Base Alpine Linux based image with OpenJDK JRE only
+# FROM openjdk:8-jre-alpine
+# # copy application WAR (with libraries inside)
+# COPY target/health.jar /app.jar
+# # specify default command
+# CMD ["/usr/bin/java", "-jar", "/app.jar"]        

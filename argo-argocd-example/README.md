@@ -27,9 +27,46 @@ See the builder.Dockerfile in this directory for an example
 4. Build and push a container image:  
    Kaniko Argo Workflows Hub
 
-5. Trigger a deployment  
+5. Scan the image:  
+   XRay or Twistlock
+
+6. Trigger a deployment  
    Update the image tag of the deployment.yaml file that is monitored by Argo CD
 
+7. Run system tests:  
+   Cypress or Robot
 
-# Simple Pipeline Stages / Steps
+8. Run security tests:  
+   Zap
 
+9. Run performance tests:   
+
+# Setup
+
+1.  Create a builder image  
+This is a custom container image that will be used to compile Java Maven projects  
+Developers should supply a builder image required to build their source code
+```
+podman build -t kbachman/kubernetes:maven -f maven.Dockerfile .
+```
+
+2.  Start a Maven container  
+Run the Maven package commannd to compile code and package a jar file (stored on mounted filesystem)
+``` 
+podman run -it --rm -v $PWD/target:/usr/src/app/target localhost/kbachman/kubernetes:jarbuilder package -T 1C -o -Dmaven.test.skip=true
+```
+
+3. Create a container image for running the Java application
+```
+podman build -t kbachman/kubernetes:alpine -f jre.Dockerfile .
+```
+
+4. Run the application
+```
+podman run -d --name alpine -p 9000:8080 localhost/kbachman/kubernetes:alpine  
+```
+
+5. Test the application
+```
+curl localhost:9000/actuator/health
+```
