@@ -3,5 +3,4 @@ kind: Namespace
 metadata:
   labels:
     istio-injection: enabled
-  name: production
----
+  name: spring-health

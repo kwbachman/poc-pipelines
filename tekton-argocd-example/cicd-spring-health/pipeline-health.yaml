@@ -85,7 +85,7 @@ spec:
         - name: output
           workspace: source-ws
 
-    - name: build
+    - name: compile
       runAfter:
         - fetch-from-git
       taskRef:
@@ -119,11 +119,11 @@ spec:
         - name: GROUP_ID
           value: "$(params.GROUP_ID)"
 
-    - name: deploy-dev
+    - name: update-tag
       taskRef:
-        name: deploy
+        name: update-tag
       runAfter:
-        - build
+        - compile
       params:
         - name: environment
           value: dev

@@ -25,18 +25,18 @@ spec:
     - name: buildRevision
       value: ''
     - name: appGitUrl
-      value: 'git@github.com:kwbach/springboot_health.git'
+      value: 'git@github.com:kwbach/app-spring-health.git'
     - name: configGitUrl
-      value: 'git@github.com:kwbach/springboot_health_config.git'
+      value: 'git@github.com:kwbach/config-spring-health.git'
 
   workspaces:
     - name: source-ws
       subPath: source
       persistentVolumeClaim:
-        claimName: buildpacks-ws-pvc
+        claimName: ws-pvc-health
     - name: cache-ws
       subPath: cache
       persistentVolumeClaim:
-        claimName: buildpacks-ws-pvc
+        claimName: ws-pvc-health
     - name: config-source
       emptyDir: {}

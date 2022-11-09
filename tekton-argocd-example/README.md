@@ -1,19 +1,18 @@
-# Tekton with ArgoCD
+# Tekton with Argo CD
 
-Blueprint for a Tekton + ArgoCD application setup.
+Protoype for a Tekton + Argo CD CI/CD pipeline.
 Supplementary documentation is here: https://oteemo.atlassian.net/wiki/spaces/OL/pages/2297921537/Tooling+POCs
 
 ## Description
 
-The purpose of this repo is to create a mock pipeline that allows for experimenting with Tekton features and determining the difficulty level of working with pipelines in Tekton's yaml syntax.  The main yaml which defines all of the pipeline tasks is located in the [pipeline-buildpacks.yaml](https://github.com/Oteemo/oteemolabs-tools/blob/main/tekton-argocd-example/buildpacks/pipeline-buildpacks.yaml).  Tekton is just performing the CI (build) portion of the pipeline.  ArgoCD will be used for deployments.  Many of the other files in this repo are helper or sample files.  The Tekton tasks that were tested are listed below.  All of the tasks are based on reusable Tasks and Pipelines found at https://hub.tekton.dev/.
+The purpose of this repo is to create a CI/CD pipeline prototype that allows for experimenting with Tekton and Argo CD features.
+
+  The main yaml which defines all of the pipeline tasks is located in the [pipeline-health.yaml](https://github.com/Oteemo/oteemolabs-tools/blob/main/tekton-argocd-example/buildpacks/pipeline-health.yaml).  Tekton is just performing the CI (build) portion of the pipeline.  ArgoCD will be used for deployments.  Many of the other files in this repo are helper or sample files.  The Tekton tasks that were tested are listed below.  All of the tasks are based on reusable Tasks and Pipelines found at https://hub.tekton.dev/.
 
 1. **Fetch** Java source code from Git (https://github.com/kwbach/springboot_health)
 2. **Build** a container image using Paketo cloud native buildpacks
 3. **Trigger Deploy** using a sed command to update the image tag in the deployment.yaml file.  ArgoCD will detect the change and redeploy the new image into Kubernetes.
 
-
-Blueprint for a Tekton + ArgoCD application setup.
-Supplementary documentation is here: https://oteemo.atlassian.net/wiki/spaces/OL/pages/2297921537/Tooling+POCs
 
 
 ## Installation
@@ -112,10 +111,6 @@ kubectl delete networkpolicy argocd-repo-server-network-policy
 kubectl delete networkpolicy argocd-server-network-policy 
 kubectl delete networkpolicy argocd-redis-network-policy  
 
-# Apply customer argocd files
-kubectl apply -f argocd/
-kubectl apply -n systemtest -f regsecret.yaml
-kubectl apply -n production -f regsecret.yaml
 ```
 
 Login in ArgoCD, find out the admin password and create a token
@@ -147,7 +142,7 @@ Under https://localhost:8081/settings/accounts/tekton generate a token.
     kubectl create secret -n tekton-pipelines generic argocd-env-secret '--from-literal=ARGOCD_AUTH_TOKEN=<token>'
 
 
-Now, adapt all ocurrences of your application and GitOps config repository, and your application Docker image.
+Now, adapt all ocurrences of your application and GitOps config repository, and your application container image.
 
 Then you can execute the pipeline, manually:
 

@@ -46,7 +46,7 @@ spec:
       - name: argo-source
         path: /src/app
         git:
-          repo: https://github.com/kwbach/springboot_health.git
+          repo: https://github.com/kwbach/app-spring-health.git
           revision: "b8903c5"
           # For private repositories, create a k8s secret containing the git credentials and
           # reference the secret keys in the secret selectors: usernameSecret, passwordSecret,
