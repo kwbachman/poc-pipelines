@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: buildpacks
   labels:
-    app.kubernetes.io/version: "0.1"
+    app.kubernetes.io/version: "0.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.17.0"
     tekton.dev/tags: image-build
@@ -16,12 +16,10 @@ spec:
 
   workspaces:
     - name: source-ws
-      description: Location where app code source is stored.
+      description: Location where source is stored.
     - name: cache-ws
       description: Location where cache is stored if CACHE_IMAGE is not provided.
       optional: true
-    - name: config-source
-      description: Location where gitops config source is stored.
 
   params:
     - name: BUILDER_IMAGE
@@ -33,8 +31,6 @@ spec:
       default: "false"
     - name: APP_IMAGE
       description: The name of where to store the app image.
-    - name: CONTAINER_IMAGE_REPO
-      description: The name of registry that stores the generated container image
     - name: SOURCE_URL
       description: A git repo url where the source code resides.
     - name: SOURCE_REFERENCE
@@ -46,7 +42,7 @@ spec:
     - name: ENV_VARS
       type: array
       description: Environment variables to set during _build-time_.
-      default: []
+      default: [""]
     - name: PROCESS_TYPE
       description: The default process type to set on the image.
       default: "web"
@@ -63,13 +59,6 @@ spec:
       description: The group ID of the builder image user.
       default: "1000"
 
-    - name: buildRevision
-      description: The revision of the build, i.e. the commit revision of the application repository
-    - name: appGitUrl
-      description: The application repository
-    - name: configGitUrl
-      description: The application config (GitOps) repository
-
   tasks:
     - name: fetch-from-git
       taskRef:
@@ -79,13 +68,10 @@ spec:
           value: $(params.SOURCE_URL)
         - name: revision
           value: $(params.SOURCE_REFERENCE)
-        - name: imageRepo
-          value: $(params.CONTAINER_IMAGE_REPO)
       workspaces:
         - name: output
           workspace: source-ws
-
-    - name: compile
+    - name: build-trusted
       runAfter:
         - fetch-from-git
       taskRef:
@@ -103,7 +89,7 @@ spec:
         - name: BUILDER_IMAGE
           value: "$(params.BUILDER_IMAGE)"
         - name: APP_IMAGE
-          value: "$(params.CONTAINER_IMAGE_REPO):$(tasks.fetch-from-git.results.commit)"
+          value: "$(params.APP_IMAGE)"
         - name: SOURCE_SUBPATH
           value: "$(params.SOURCE_SUBPATH)"
         - name: PROCESS_TYPE
@@ -118,23 +104,36 @@ spec:
           value: "$(params.USER_ID)"
         - name: GROUP_ID
           value: "$(params.GROUP_ID)"
-
-    - name: update-tag
-      taskRef:
-        name: update-tag
+    - name: build-untrusted
       runAfter:
-        - compile
-      params:
-        - name: environment
-          value: dev
-        - name: argo-app-name
-          value: spring-health-check
-        - name: configGitUrl
-          value: $(params.configGitUrl)
-        - name: appImage
-          value: $(params.CONTAINER_IMAGE_REPO)
-        - name: buildRevision
-          value: $(tasks.fetch-from-git.results.commit)
+        - fetch-from-git
+      taskRef:
+        name: buildpacks-phases
+      when:
+        - input: "$(params.TRUST_BUILDER)"
+          operator: notin
+          values: ["true", "yes", "TRUE", "True"]
       workspaces:
-        - name: config-source
-          workspace: config-source
+        - name: source
+          workspace: source-ws
+        - name: cache
+          workspace: cache-ws
+      params:
+        - name: BUILDER_IMAGE
+          value: "$(params.BUILDER_IMAGE)"
+        - name: APP_IMAGE
+          value: "$(params.APP_IMAGE)"
+        - name: SOURCE_SUBPATH
+          value: "$(params.SOURCE_SUBPATH)"
+        - name: ENV_VARS
+          value: ["$(params.ENV_VARS)"]
+        - name: PROCESS_TYPE
+          value: "$(params.PROCESS_TYPE)"
+        - name: RUN_IMAGE
+          value: "$(params.RUN_IMAGE)"
+        - name: CACHE_IMAGE
+          value: "$(params.CACHE_IMAGE)"
+        - name: USER_ID
+          value: "$(params.USER_ID)"
+        - name: GROUP_ID
+          value: "$(params.GROUP_ID)"

@@ -1,32 +1,43 @@
 # Tekton with Argo CD
 
-Protoype for a Tekton + Argo CD CI/CD pipeline.
+Protoype for a Tekton + Argo CD pipeline.
 Supplementary documentation is here: https://oteemo.atlassian.net/wiki/spaces/OL/pages/2297921537/Tooling+POCs
 
 ## Description
 
 The purpose of this repo is to create a CI/CD pipeline prototype that allows for experimenting with Tekton and Argo CD features.
 
-  The main yaml which defines all of the pipeline tasks is located in the [pipeline-health.yaml](https://github.com/Oteemo/oteemolabs-tools/blob/main/tekton-argocd-example/buildpacks/pipeline-health.yaml).  Tekton is just performing the CI (build) portion of the pipeline.  ArgoCD will be used for deployments.  Many of the other files in this repo are helper or sample files.  The Tekton tasks that were tested are listed below.  All of the tasks are based on reusable Tasks and Pipelines found at https://hub.tekton.dev/.
-
-1. **Fetch** Java source code from Git (https://github.com/kwbach/springboot_health)
-2. **Build** a container image using Paketo cloud native buildpacks
-3. **Trigger Deploy** using a sed command to update the image tag in the deployment.yaml file.  ArgoCD will detect the change and redeploy the new image into Kubernetes.
-
-
-
+Tekton performs the CI (build) portion of the pipeline.  Argo CD handles the deployments.  Reusable tasks with hub- prepended to the filenames were downloaded from the Tekton hub at https://hub.tekton.dev/.
 ## Installation
 
 Requires a Kubernetes cluster.  It can be anywhere: local, bare-metal, cloud, it doesn't matter. 
 
-Install Tekton
+### Tekton
 
+#### Install
+```
+    # Clone this repository
+    git clone https://github.com/Oteemo/oteemolabs-tools.git
+    cd tekton-argocd-example
+
+    # Create custom resource definitions (CRDs)
     kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
 
-Create Secrets
+    # Create service account
+    kubectl apply -f tekton/
 
-These are needed for SSH GitHub and Docker registry access.  This is one way to create a SSH key, that will be added to GitHub.
-There are in fact many ways for Tekton to get access to GitHub.
+    # Install the Dashboard:
+    kubectl apply -f https://github.com/tektoncd/dashboard/releases/latest/download/tekton-dashboard-release.yaml
+```
+
+
+    
+#### Add Credentials
+
+These are needed for SSH Git and image registry access.  This is one way to create a SSH key, that will be added to GitHub. There are in fact many ways for Tekton to get access to GitHub.
+
+*Consider replacing this with a SOPS secret in the future*  
+*Consider making these instructions less verbose*
 
 ```
 ssh-keygen -t rsa -b 4096 -C "tekton@tekton.dev"
@@ -49,57 +60,25 @@ data:
 ---
 EOM
 
+# create the secret in Kubernetes
 kubectl apply -f tekton-git-ssh-secret.yaml
 
-# create your Docker registry secret, for example:
+# create your image registry secret, for example:
 # find a docker config file with active login to registry
 cat ~/.docker/config.json | base64 -w 0
+
+
 kubectl create secret docker-registry regsecret
 --docker-server=https://index.docker.io/v1/ --docker-username=kbachman --docker-password=xxxxxx --docker-email=kbachman@gmail.com
+
 # paste the base64 value into the .dockercfg line of yaml
 # save the yaml in home directory, it will need to be tweaked and reapplied later
 
 ```
 
-Add Additional Configurations as Needed
+### Argo CD
 
-```
-# GitHub PAT for git cli access on local machine
-1. github.com > Settings > Developer Settings > Personal access tokens > Generate new token > copy value
-# Run the following wizard to cache the token.  Install gh if it can't be found.
-2. gh auth login > GitHub.com > authenticate > HTTPS > enter token
-
-# Add a local host table entry for Kubernetes cluster
-sudo nano /private/etc/hosts
-
-# Add connectivity info for another Kubernetes cluster
-1. Copy the ~/.kube/config file from the Kubernetes control-plane
-2. Add it to ~/.kube/ on the local system with a new file name
-3. Add the new config file to the KUBECONFIG env var.  Put it in ~/.zshrc so that it's auto set upon shell login.
-export KUBECONFIG=/Users/kevin/.kube/aws:/Users/kevin/.kube/home
-# reload the shell config file
-source ~/.zshrc
-# check and switch to the new context
-kubectl config get-contexts
-kubectl config use-context <new_config_filename>
-
-# Point kubectl at a different cluster
-k config get-contexts
-k config use-context kubernetes
-
-```
-
-Setup the Tekton serviceaccount:
-
-    kubectl apply -f tekton/
-
-
-Install the Tekton Dashboard:
-
-    kubectl apply -f https://github.com/tektoncd/dashboard/releases/latest/download/tekton-dashboard-release.yaml
-
-
-Install ArgoCD
+#### Install
 
 ```
 kubectl create namespace argocd
@@ -113,7 +92,7 @@ kubectl delete networkpolicy argocd-redis-network-policy
 
 ```
 
-Login in ArgoCD, find out the admin password and create a token
+#### Login
 
 ```
 # Username = admin
@@ -135,7 +114,8 @@ https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#kubernetesingr
 # the same can be done for tekton endpoints, search the web for tekton ingress examples
 ```
 
-Create ArgoCD Access with Tekton
+### Integration
+Create Argo CD Access with Tekton
 
 Under https://localhost:8081/settings/accounts/tekton generate a token.
 

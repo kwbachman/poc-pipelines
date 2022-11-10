@@ -2,9 +2,9 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  generateName: buildpacks-pipelinerun-
+  generateName: pipelinerun-spring-health-
   labels:
-    app.kubernetes.io/description: PipelineRunTest
+    app.kubernetes.io/description: PipelineRunSpringHealth
 spec:
   serviceAccountName: pipeline
   pipelineRef:
@@ -19,7 +19,7 @@ spec:
     - name: CONTAINER_IMAGE_REPO
       value: kbachman/kubernetes
     - name: SOURCE_URL
-      value: https://github.com/kwbach/springboot_health
+      value: https://github.com/kwbach/app-spring-health
     - name: SOURCE_SUBPATH
       value: ""
     - name: buildRevision
